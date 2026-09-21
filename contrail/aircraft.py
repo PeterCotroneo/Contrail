@@ -7,9 +7,11 @@ aircraft's track and coloured by emitter category (with an Emergency override
 for 7500/7600/7700 squawks). Aircraft not heard from for a while are expired.
 """
 
+import os
 import time
 
 from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtGui import QColor
 from qgis.core import (
     QgsVectorLayer,
     QgsFeature,
@@ -19,6 +21,7 @@ from qgis.core import (
     QgsPointXY,
     QgsProject,
     QgsMarkerSymbol,
+    QgsSvgMarkerSymbolLayer,
     QgsCategorizedSymbolRenderer,
     QgsRendererCategory,
     QgsPointClusterRenderer,
@@ -33,6 +36,7 @@ from ._debug import dbg
 from .icao import country_for_hex
 
 LAYER_NAME = "Contrail — Live Aircraft"
+_PLANE_SVG = os.path.join(os.path.dirname(__file__), "plane.svg")
 
 # ordered layer fields
 _FIELDS = [
@@ -218,9 +222,13 @@ class AircraftStore:
         try:
             categories = []
             for group, color in CATEGORY_COLORS:
-                sym = QgsMarkerSymbol.createSimple(
-                    {"name": "triangle", "size": "4", "color": color,
-                     "outline_color": "black", "outline_width": "0.2"})
+                svg = QgsSvgMarkerSymbolLayer(_PLANE_SVG)
+                svg.setSize(6)
+                svg.setFillColor(QColor(color))
+                svg.setStrokeColor(QColor("black"))
+                svg.setStrokeWidth(0.2)
+                sym = QgsMarkerSymbol()
+                sym.changeSymbolLayer(0, svg)   # plane silhouette, not a triangle
                 sym.setDataDefinedAngle(QgsProperty.fromField("rotation"))
                 categories.append(QgsRendererCategory(group, sym, group))
             by_cat = QgsCategorizedSymbolRenderer("cat_group", categories)

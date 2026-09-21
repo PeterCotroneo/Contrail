@@ -93,7 +93,11 @@ class ContrailPlugin:
         self._running = False
         self.log_view = None
         self.rb_view = None
+        self.rb_draw = None
         self.chk_airborne = None
+        self.btn_start = None
+        self.lbl_status = None
+        self.cbo_provider = None
         self._extent_timer = None
 
     # --- plugin lifecycle ------------------------------------------------
@@ -146,6 +150,10 @@ class ContrailPlugin:
     # --- UI --------------------------------------------------------------
     def _build_dock(self):
         dock = QDockWidget("Contrail", self.iface.mainWindow())
+        # keep it a side panel — left/right only, so it never sprawls full-width
+        # across the top or bottom of the window
+        dock.setAllowedAreas(
+            Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
         panel = QWidget()
         layout = QVBoxLayout(panel)
 
