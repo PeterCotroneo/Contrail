@@ -143,6 +143,10 @@ class ContrailPlugin:
             if self.dock is None:
                 self.dock = self._build_dock()
                 self.iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock)
+                # give it a sane width — QGIS may restore an oversized one that
+                # squishes the map. Stays freely resizable afterwards.
+                self.iface.mainWindow().resizeDocks(
+                    [self.dock], [420], Qt.Orientation.Horizontal)
             self.dock.show()
         elif self.dock is not None:
             self.dock.hide()

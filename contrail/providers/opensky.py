@@ -17,6 +17,7 @@ from .base import AircraftProvider
 from .._debug import dbg
 
 POLL_MS = 10000            # anonymous OpenSky is rate-limited; poll gently
+MAX_POLL_MS = 120000       # slowest we back off to when rate-limited
 USER_AGENT = "ContrailQGIS/0.1 (QGIS plugin)"
 M_TO_FT = 3.28084
 MS_TO_KT = 1.94384
@@ -66,6 +67,15 @@ class OpenSkyProvider(AircraftProvider):
 
     def update_area(self, bboxes):
         self._bbox = bboxes[0] if bboxes else None
+        if self._timer.interval() != POLL_MS:
+            self._timer.setInterval(POLL_MS)  # new area — normal rate again
+
+    def _back_off(self):
+        interval = min(self._timer.interval() * 2, MAX_POLL_MS)
+        self._timer.setInterval(interval)
+        secs = interval // 1000
+        self.status_changed.emit(f"OpenSky rate-limited — slowing to {secs}s")
+        dbg(f"OpenSky rate-limited (HTTP 429); backing off to {secs}s")
 
     def _poll(self):
         if self._want:
@@ -88,10 +98,12 @@ class OpenSkyProvider(AircraftProvider):
         reply.deleteLater()
         if not self._want:
             return
+        http = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+        if http == 429:
+            self._back_off()  # rate-limited — slow down quietly, no error spam
+            return
         if reply.error() != QNetworkReply.NetworkError.NoError:
-            self.error.emit(
-                f"OpenSky unreachable ({reply.errorString()}). Anonymous access "
-                "is rate-limited — try again shortly or slow the polling.")
+            self.error.emit(f"OpenSky unreachable ({reply.errorString()}).")
             return
         try:
             data = json.loads(bytes(reply.readAll()))

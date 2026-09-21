@@ -18,6 +18,7 @@ from .base import AircraftProvider
 from .._debug import dbg
 
 POLL_MS = 5000
+MAX_POLL_MS = 60000        # slowest we back off to when rate-limited
 MAX_NM = 250               # adsb.lol / adsb.fi max search radius
 USER_AGENT = "ContrailQGIS/0.1 (QGIS plugin)"
 
@@ -94,6 +95,18 @@ class AdsbJsonProvider(AircraftProvider):
 
     def update_area(self, bboxes):
         self._bbox = bboxes[0] if bboxes else None
+        self._reset_interval()  # new area — try at the normal rate again
+
+    def _reset_interval(self):
+        if self._timer.interval() != POLL_MS:
+            self._timer.setInterval(POLL_MS)
+
+    def _back_off(self):
+        interval = min(self._timer.interval() * 2, MAX_POLL_MS)
+        self._timer.setInterval(interval)
+        secs = interval // 1000
+        self.status_changed.emit(f"{self.label} rate-limited — slowing to {secs}s")
+        dbg(f"{self.label} rate-limited (HTTP 429); backing off to {secs}s")
 
     def _poll(self):
         if self._want:
@@ -114,6 +127,11 @@ class AdsbJsonProvider(AircraftProvider):
         reply.deleteLater()
         if not self._want:
             return
+        http = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+        if http == 429:
+            # rate-limited — slow down quietly instead of hammering + erroring
+            self._back_off()
+            return
         # reply.error() is an enum member that is truthy even for NoError (0),
         # so compare explicitly.
         if reply.error() != QNetworkReply.NetworkError.NoError:
@@ -129,6 +147,8 @@ class AdsbJsonProvider(AircraftProvider):
             rec = _normalise(a)
             if rec:
                 self.aircraft_update.emit(rec)
+        # keep any backed-off interval sticky (only update_area resets it) so we
+        # settle at a sustainable rate instead of oscillating back into 429s.
         self.status_changed.emit("Connected")
         dbg(f"{self.label}: {len(ac)} aircraft")
 
