@@ -211,6 +211,7 @@ class ContrailPlugin:
         layout.addWidget(self.chk_airborne)
 
         self.lbl_status = QLabel("Idle")
+        self.lbl_status.setWordWrap(True)  # long errors wrap, don't widen the dock
         layout.addWidget(self.lbl_status)
 
         # collapsible activity log directly under the status (no gap)
