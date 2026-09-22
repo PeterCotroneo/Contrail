@@ -66,9 +66,10 @@ class OpenSkyProvider(AircraftProvider):
         self._timer.stop()
 
     def update_area(self, bboxes):
+        # Keep the current (possibly backed-off) rate — OpenSky's anonymous limit
+        # is request-count based, so snapping back to a fast rate on every extent
+        # change just re-triggers 429s. It settles at a sustainable rate instead.
         self._bbox = bboxes[0] if bboxes else None
-        if self._timer.interval() != POLL_MS:
-            self._timer.setInterval(POLL_MS)  # new area — normal rate again
 
     def _back_off(self):
         interval = min(self._timer.interval() * 2, MAX_POLL_MS)

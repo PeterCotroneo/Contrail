@@ -76,6 +76,7 @@ class AdsbJsonProvider(AircraftProvider):
         super().__init__(settings, parent)
         self._bbox = None
         self._want = False
+        self._mult = 1  # backoff multiplier on top of the radius-scaled base
         self._nam = QgsNetworkAccessManager.instance()
         self._timer = QTimer(self)
         self._timer.setInterval(POLL_MS)
@@ -84,6 +85,8 @@ class AdsbJsonProvider(AircraftProvider):
     def start(self, bboxes):
         self._bbox = bboxes[0] if bboxes else None
         self._want = True
+        self._mult = 1
+        self._apply_interval()
         self.status_changed.emit("Connecting…")
         dbg(f"Polling {self.label}")
         self._fetch()
@@ -95,16 +98,27 @@ class AdsbJsonProvider(AircraftProvider):
 
     def update_area(self, bboxes):
         self._bbox = bboxes[0] if bboxes else None
-        self._reset_interval()  # new area — try at the normal rate again
+        self._mult = 1  # new area — recompute the base rate for its size
+        self._apply_interval()
 
-    def _reset_interval(self):
-        if self._timer.interval() != POLL_MS:
-            self._timer.setInterval(POLL_MS)
+    def _base_interval(self):
+        """Poll rate scaled to query size: a wide (large-radius) view is a heavy
+        request and is polled less often, a zoomed-in view refreshes fast. This
+        keeps big views under the rate limit instead of hammering at 5s."""
+        if not self._bbox:
+            return POLL_MS
+        _, _, nm = _bbox_to_point_radius(self._bbox)
+        return max(POLL_MS, min(int(nm / 8.0) * 1000, 30000))
+
+    def _apply_interval(self):
+        self._timer.setInterval(min(self._base_interval() * self._mult, MAX_POLL_MS))
 
     def _back_off(self):
-        interval = min(self._timer.interval() * 2, MAX_POLL_MS)
-        self._timer.setInterval(interval)
-        secs = interval // 1000
+        # sticky: only update_area (a real area change) clears the multiplier, so
+        # we settle at a sustainable rate instead of snapping back into 429s.
+        self._mult = min(self._mult * 2, 16)
+        self._apply_interval()
+        secs = self._timer.interval() // 1000
         self.status_changed.emit(f"{self.label} rate-limited — slowing to {secs}s")
         dbg(f"{self.label} rate-limited (HTTP 429); backing off to {secs}s")
 
