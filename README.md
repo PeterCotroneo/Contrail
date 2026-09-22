@@ -5,8 +5,13 @@ aircraft positions into QGIS and shows planes moving — track your current map
 view, or draw an area to watch. Contrail shows *live* traffic only; it does not
 replay history.
 
-It's the sky-side companion to [Wake](https://github.com/PeterCotroneo/Wake),
-which does the same for live marine vessel traffic.
+Contrail is one of three sibling plugins built on the same live-tracking engine —
+a pluggable data-source layer, a moving-point map layer, clustering and identify —
+covering **sea, sky and space**:
+
+- [Wake](https://github.com/PeterCotroneo/Wake) — marine vessels (AIS)
+- **Contrail** — aircraft (this one)
+- [Zenith](https://github.com/PeterCotroneo/Zenith) — satellites
 
 ![Contrail tracking aircraft over the central Mediterranean](docs/img/01-mediterranean.jpg)
 
