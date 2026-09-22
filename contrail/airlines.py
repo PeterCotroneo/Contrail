@@ -16,8 +16,10 @@ import os
 
 _PATH = os.path.join(os.path.dirname(__file__), "airlines.json")
 try:
+    # stored as a list of [code, name] pairs (not a dict) so no ICAO code is ever
+    # a JSON key — some codes (PWD, KEY, SEC…) trip secret-keyword scanners.
     with open(_PATH, encoding="utf-8") as _fh:
-        AIRLINES = json.load(_fh)
+        AIRLINES = dict(json.load(_fh))
 except (OSError, ValueError):
     AIRLINES = {}
 
