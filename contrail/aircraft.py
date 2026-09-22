@@ -34,6 +34,7 @@ from qgis.core import (
 
 from ._debug import dbg
 from .icao import country_for_hex
+from .airlines import operator_for_callsign
 
 LAYER_NAME = "Contrail — Live Aircraft"
 _PLANE_SVG = os.path.join(os.path.dirname(__file__), "plane.svg")
@@ -42,6 +43,7 @@ _PLANE_SVG = os.path.join(os.path.dirname(__file__), "plane.svg")
 _FIELDS = [
     ("hex", QVariant.String),
     ("callsign", QVariant.String),
+    ("operator", QVariant.String),
     ("flag", QVariant.String),
     ("type", QVariant.String),
     ("cat_group", QVariant.String),
@@ -58,7 +60,8 @@ _FIELDS = [
 _FIELD_INDEX = {name: i for i, (name, _t) in enumerate(_FIELDS)}
 
 _ALIASES = {
-    "hex": "ICAO hex", "callsign": "Callsign", "flag": "Country",
+    "hex": "ICAO hex", "callsign": "Callsign", "operator": "Operator",
+    "flag": "Country",
     "type": "Aircraft type", "cat_group": "Category", "squawk": "Squawk",
     "emergency": "Emergency", "altitude": "Altitude (ft)", "gs": "Ground speed (kn)",
     "track": "Track (°)", "vert_rate": "Vertical rate (ft/min)",
@@ -69,6 +72,8 @@ _MAP_TIP = (
     "<b>[% coalesce(nullif(\"callsign\",''),\"hex\") %]</b> "
     "<span style='color:gray'>[% \"hex\" %]</span>"
     "[% CASE WHEN \"flag\" IS NOT NULL AND \"flag\" != '' THEN ' · ' || \"flag\" ELSE '' END %]<br/>"
+    "[% CASE WHEN \"operator\" IS NOT NULL AND \"operator\" != '' "
+    "THEN \"operator\" || '<br/>' ELSE '' END %]"
     "[% coalesce(nullif(\"type\",''),\"cat_group\") %]"
     "[% CASE WHEN \"on_ground\" = 1 THEN ' · on ground' ELSE '' END %]<br/>"
     "Alt [% coalesce(\"altitude\",'?') %] ft · [% coalesce(\"gs\",'?') %] kn · "
@@ -282,6 +287,7 @@ class AircraftStore:
     def _attrs(self, rec):
         return {
             _FIELD_INDEX["callsign"]: rec.get("callsign", ""),
+            _FIELD_INDEX["operator"]: operator_for_callsign(rec.get("callsign")),
             _FIELD_INDEX["flag"]: rec.get("country") or country_for_hex(rec.get("hex")),
             _FIELD_INDEX["type"]: rec.get("type_desc", ""),
             _FIELD_INDEX["cat_group"]: _cat_group(rec),

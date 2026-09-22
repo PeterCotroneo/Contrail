@@ -10,14 +10,16 @@ from .base import AircraftProvider
 from .adsb import AdsbLolProvider, AdsbFiProvider
 from .opensky import OpenSkyProvider
 
-# id -> provider class (order shown in the dropdown)
+# id -> provider class (order shown in the dropdown; the first is the default).
+# adsb.fi leads — it rate-limits less aggressively than adsb.lol, so it gives a
+# smoother refresh out of the box.
 PROVIDERS = {
-    AdsbLolProvider.id: AdsbLolProvider,
     AdsbFiProvider.id: AdsbFiProvider,
+    AdsbLolProvider.id: AdsbLolProvider,
     OpenSkyProvider.id: OpenSkyProvider,
 }
 
 __all__ = [
-    "AircraftProvider", "AdsbLolProvider", "AdsbFiProvider",
+    "AircraftProvider", "AdsbFiProvider", "AdsbLolProvider",
     "OpenSkyProvider", "PROVIDERS",
 ]
